@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:4000',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,7 +26,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Only redirect if on protected routes like dashboard or checkout
+      const path = window.location.pathname;
+      if (path.startsWith('/dashboard') || path.startsWith('/checkout')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

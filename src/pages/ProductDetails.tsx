@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ShoppingCart, Heart, Share2, Minus, Plus, Check } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Heart, Share2, Minus, Plus, Check, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/Loader';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/hooks/use-toast';
+import { ThreeDTilt } from '@/components/ThreeDTilt';
 import api from '@/api/axios';
 
 interface Product {
@@ -16,6 +17,7 @@ interface Product {
   category?: string;
   description?: string;
   stock?: number;
+  rating?: number;
 }
 
 const ProductDetails = () => {
@@ -54,10 +56,18 @@ const ProductDetails = () => {
 
   const handleAddToCart = async () => {
     if (!product) return;
-    
+
+    if (product.stock !== undefined && product.stock < quantity) {
+      toast({
+        title: 'Insufficient stock',
+        description: `Only ${product.stock} items available in stock.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsAdding(true);
-    
-    // Add the item multiple times based on quantity
+
     for (let i = 0; i < quantity; i++) {
       addItem({
         id: product._id,
@@ -66,12 +76,12 @@ const ProductDetails = () => {
         image: product.image || '/placeholder.svg',
       });
     }
-    
+
     toast({
       title: 'Added to cart',
       description: `${quantity}x ${product.name} added to your cart.`,
     });
-    
+
     setTimeout(() => setIsAdding(false), 500);
   };
 
@@ -110,25 +120,38 @@ const ProductDetails = () => {
           Back
         </motion.button>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Image Section */}
+        <div className="grid lg:grid-cols-2 gap-12 items-start">
+          {/* 3D Image Showcase */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="relative aspect-square rounded-3xl overflow-hidden glass shadow-xl">
-              <img
-                src={product.image || '/placeholder.svg'}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-              {product.category && (
-                <span className="absolute top-4 left-4 px-4 py-2 text-sm font-medium bg-background/90 backdrop-blur-sm rounded-full">
-                  {product.category}
-                </span>
-              )}
-            </div>
+            <ThreeDTilt depth="deep" glow>
+              <div className="relative aspect-square rounded-3xl overflow-hidden glass shadow-2xl border border-border/60 p-4">
+                <img
+                  src={product.image || '/placeholder.svg'}
+                  alt={product.name}
+                  className="w-full h-full object-cover rounded-2xl"
+                />
+                {product.category && (
+                  <span className="absolute top-6 left-6 px-4 py-1.5 text-xs font-semibold bg-background/90 backdrop-blur-md rounded-full border border-border/40 shadow-md">
+                    {product.category}
+                  </span>
+                )}
+                {product.stock !== undefined && (
+                  <span
+                    className={`absolute top-6 right-6 px-3 py-1 text-xs font-medium rounded-full backdrop-blur-md border ${
+                      product.stock > 0
+                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : 'bg-destructive/20 text-destructive border-destructive/30'
+                    }`}
+                  >
+                    {product.stock > 0 ? `${product.stock} In Stock` : 'Out of Stock'}
+                  </span>
+                )}
+              </div>
+            </ThreeDTilt>
           </motion.div>
 
           {/* Details Section */}
@@ -139,92 +162,93 @@ const ProductDetails = () => {
             className="space-y-6"
           >
             <div>
-              <h1 className="text-3xl md:text-4xl font-display font-bold mb-2">
+              <h1 className="text-3xl lg:text-4xl font-display font-bold text-foreground">
                 {product.name}
               </h1>
-              <p className="text-3xl font-semibold gradient-text">
-                ${product.price.toFixed(2)}
-              </p>
-            </div>
-
-            <div className="h-px bg-border" />
-
-            <div>
-              <h3 className="font-semibold mb-2">Description</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                {product.description ||
-                  'This premium product is crafted with the highest quality materials, designed to deliver exceptional performance and style. Perfect for those who appreciate the finer things in life.'}
-              </p>
-            </div>
-
-            <div className="h-px bg-border" />
-
-            {/* Quantity Selector */}
-            <div className="space-y-2">
-              <h3 className="font-semibold">Quantity</h3>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center glass rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="p-3 hover:bg-muted transition-colors"
-                    disabled={quantity <= 1}
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="p-3 hover:bg-muted transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-                {product.stock && (
-                  <span className="text-sm text-muted-foreground">
-                    {product.stock} in stock
+              <div className="flex items-center gap-4 mt-3">
+                <span className="text-3xl font-extrabold text-foreground">
+                  ${product.price.toFixed(2)}
+                </span>
+                {product.rating && (
+                  <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    ★ {product.rating} Rating
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Action Buttons */}
+            <p className="text-muted-foreground leading-relaxed text-base">
+              {product.description}
+            </p>
+
+            {/* Quantity Selector */}
+            <div className="space-y-2 pt-2">
+              <label className="text-sm font-medium">Quantity</label>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center border border-input rounded-xl bg-background shadow-sm">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                    className="p-3 hover:bg-muted rounded-l-xl transition-colors disabled:opacity-40"
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="w-12 text-center font-semibold">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    disabled={product.stock !== undefined && quantity >= product.stock}
+                    className="p-3 hover:bg-muted rounded-r-xl transition-colors disabled:opacity-40"
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                {product.stock !== undefined && (
+                  <span className="text-xs text-muted-foreground">
+                    Max: {product.stock} available
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button
                 variant="gradient"
                 size="xl"
-                className="flex-1 gap-2"
+                className="flex-1 gap-2 shadow-lg"
                 onClick={handleAddToCart}
-                disabled={isAdding}
+                disabled={isAdding || product.stock === 0}
               >
-                {isAdding ? (
-                  <Check className="w-5 h-5" />
+                {isInCart ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    Add More ({quantity})
+                  </>
                 ) : (
-                  <ShoppingCart className="w-5 h-5" />
+                  <>
+                    <ShoppingCart className="w-5 h-5" />
+                    Add to Cart ({quantity})
+                  </>
                 )}
-                {isInCart ? 'Add More' : 'Add to Cart'}
-              </Button>
-              <Button variant="outline" size="xl" className="gap-2">
-                <Heart className="w-5 h-5" />
-                Wishlist
-              </Button>
-              <Button variant="ghost" size="icon" className="h-14 w-14">
-                <Share2 className="w-5 h-5" />
               </Button>
             </div>
 
-            {/* Features */}
-            <div className="grid grid-cols-2 gap-4 pt-6">
-              {[
-                { label: 'Free Shipping', value: 'Orders over $50' },
-                { label: 'Easy Returns', value: '30-day return policy' },
-                { label: 'Secure Payment', value: '100% protected' },
-                { label: 'Quality Guarantee', value: '1 year warranty' },
-              ].map((feature) => (
-                <div key={feature.label} className="glass p-4 rounded-xl">
-                  <h4 className="font-medium text-sm">{feature.label}</h4>
-                  <p className="text-xs text-muted-foreground">{feature.value}</p>
-                </div>
-              ))}
+            {/* Trust Assurances */}
+            <div className="pt-6 border-t border-border/50 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 text-sm">
+                <Truck className="w-5 h-5 text-primary shrink-0" />
+                <span>Fast express delivery</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 text-sm">
+                <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
+                <span>Genuine sports warranty</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 text-sm">
+                <RotateCcw className="w-5 h-5 text-primary shrink-0" />
+                <span>30-Day returns guarantee</span>
+              </div>
             </div>
           </motion.div>
         </div>

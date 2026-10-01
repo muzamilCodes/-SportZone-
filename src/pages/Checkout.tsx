@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CreditCard, Lock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, CheckCircle, Truck, AlertCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { ThreeDTilt } from '@/components/ThreeDTilt';
 import api from '@/api/axios';
 
 interface FormData {
@@ -17,12 +18,21 @@ interface FormData {
   zipCode: string;
 }
 
+interface PlacedOrderInfo {
+  _id: string;
+  total: number;
+  paymentMethod: string;
+  shippingFee: number;
+  tax: number;
+}
+
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState<PlacedOrderInfo | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'cash_on_delivery' | 'stripe_card_test'>('cash_on_delivery');
   const [formData, setFormData] = useState<FormData>({
     name: user?.name || '',
     email: user?.email || '',
@@ -52,38 +62,45 @@ const Checkout = () => {
     setIsSubmitting(true);
 
     try {
-      const orderData = {
+      // Security: Backend recalculates unit prices and totals from database
+      const orderPayload = {
         items: items.map((item) => ({
           productId: item.id,
-          name: item.name,
-          price: item.price,
           quantity: item.quantity,
         })),
-        total: total + (total >= 50 ? 0 : 4.99) + total * 0.08,
-        shipping: {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          zipCode: formData.zipCode,
-        },
+        shipping: formData,
+        paymentMethod,
       };
 
-      await api.post('/order', orderData);
+      const response = await api.post('/order', orderPayload);
+      const createdOrder = response.data.order;
 
-      setIsSuccess(true);
+      setPlacedOrder({
+        _id: createdOrder._id,
+        total: createdOrder.total,
+        paymentMethod: createdOrder.paymentMethod,
+        shippingFee: createdOrder.shippingFee,
+        tax: createdOrder.tax,
+      });
+
       clearCart();
 
       toast({
-        title: 'Order placed successfully!',
-        description: 'Thank you for your purchase.',
+        title: 'Order Confirmed!',
+        description:
+          paymentMethod === 'cash_on_delivery'
+            ? 'Order registered for Cash on Delivery.'
+            : 'Order registered in Test Sandbox mode.',
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Checkout failed:', error);
+      const serverMessage =
+        typeof error === 'object' && error !== null && 'response' in error && (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          ? (error as { response?: { data?: { message?: string } } }).response!.data!.message!
+          : 'Checkout failed. Please verify your details.';
       toast({
-        title: 'Checkout failed',
-        description: 'Please try again or contact support.',
+        title: 'Checkout Unsuccessful',
+        description: serverMessage,
         variant: 'destructive',
       });
     } finally {
@@ -91,41 +108,69 @@ const Checkout = () => {
     }
   };
 
-  if (isSuccess) {
+  if (placedOrder) {
     return (
-      <div className="min-h-screen py-16 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-6 max-w-md"
-        >
+      <div className="min-h-screen py-16 flex items-center justify-center container mx-auto px-4">
+        <ThreeDTilt depth="medium">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring' }}
-            className="w-24 h-24 mx-auto rounded-full bg-primary/10 flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center space-y-6 max-w-lg glass p-8 rounded-3xl border border-primary/20 shadow-2xl"
           >
-            <CheckCircle className="w-12 h-12 text-primary" />
-          </motion.div>
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Order Confirmed!</h2>
-            <p className="text-muted-foreground">
-              Thank you for your purchase. We'll send you an email confirmation shortly.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4">
-            <Button
-              variant="gradient"
-              size="lg"
-              onClick={() => navigate('/dashboard')}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring' }}
+              className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary"
             >
-              View Orders
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/products')}>
-              Continue Shopping
-            </Button>
-          </div>
-        </motion.div>
+              <CheckCircle className="w-10 h-10" />
+            </motion.div>
+
+            <div>
+              <h2 className="text-3xl font-display font-bold mb-2">Order Confirmed!</h2>
+              <p className="text-sm text-muted-foreground">
+                Order ID: <span className="font-mono font-semibold text-foreground">{placedOrder._id}</span>
+              </p>
+            </div>
+
+            {/* Honest Payment Notice */}
+            <div className="p-4 rounded-xl bg-muted/50 border border-border/60 text-left text-sm space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-foreground">
+                <Truck className="w-4 h-4 text-primary" />
+                <span>
+                  {placedOrder.paymentMethod === 'cash_on_delivery'
+                    ? 'Payment Method: Cash on Delivery'
+                    : 'Payment Method: Test Card (Sandbox)'}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {placedOrder.paymentMethod === 'cash_on_delivery'
+                  ? 'Your order has been recorded. Exact amount of $' +
+                    placedOrder.total.toFixed(2) +
+                    ' will be collected upon parcel handover.'
+                  : 'Notice: No live payment gateway was charged. Set VITE_STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY to enable live card transactions.'}
+              </p>
+              <div className="pt-2 border-t border-border/40 flex justify-between font-bold text-foreground">
+                <span>Verified Server Total:</span>
+                <span>${placedOrder.total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+              <Button
+                variant="gradient"
+                size="lg"
+                className="flex-1"
+                onClick={() => navigate('/dashboard')}
+              >
+                Track In Dashboard
+              </Button>
+              <Button variant="outline" size="lg" className="flex-1" onClick={() => navigate('/products')}>
+                Continue Shopping
+              </Button>
+            </div>
+          </motion.div>
+        </ThreeDTilt>
       </div>
     );
   }
@@ -143,29 +188,33 @@ const Checkout = () => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8 text-sm"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Cart
         </motion.button>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-12 gap-8 items-start">
           {/* Checkout Form */}
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
+            className="lg:col-span-7"
           >
-            <h1 className="text-3xl font-display font-bold mb-8">Checkout</h1>
+            <h1 className="text-3xl font-display font-bold mb-6">Complete Your Order</h1>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Contact Information */}
-              <div className="glass rounded-2xl p-6 space-y-4">
-                <h2 className="font-semibold text-lg">Contact Information</h2>
+              <div className="glass rounded-2xl p-6 space-y-4 border border-border/50">
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-bold">1</span>
+                  Recipient & Contact
+                </h2>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium block mb-2">
-                      Full Name
+                    <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 text-muted-foreground">
+                      Full Name *
                     </label>
                     <input
                       type="text"
@@ -173,13 +222,13 @@ const Checkout = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 px-4 rounded-lg bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                      placeholder="John Doe"
+                      className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
+                      placeholder="e.g. Alex Morgan"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium block mb-2">
-                      Email
+                    <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 text-muted-foreground">
+                      Email Address *
                     </label>
                     <input
                       type="email"
@@ -187,14 +236,14 @@ const Checkout = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 px-4 rounded-lg bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                      placeholder="john@example.com"
+                      className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
+                      placeholder="alex@example.com"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium block mb-2">
-                    Phone Number
+                  <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 text-muted-foreground">
+                    Phone Number *
                   </label>
                   <input
                     type="tel"
@@ -202,18 +251,21 @@ const Checkout = () => {
                     value={formData.phone}
                     onChange={handleInputChange}
                     required
-                    className="w-full h-12 px-4 rounded-lg bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                    placeholder="+1 (555) 000-0000"
+                    className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
+                    placeholder="+1 (555) 234-5678"
                   />
                 </div>
               </div>
 
               {/* Shipping Address */}
-              <div className="glass rounded-2xl p-6 space-y-4">
-                <h2 className="font-semibold text-lg">Shipping Address</h2>
+              <div className="glass rounded-2xl p-6 space-y-4 border border-border/50">
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-bold">2</span>
+                  Delivery Address
+                </h2>
                 <div>
-                  <label className="text-sm font-medium block mb-2">
-                    Street Address
+                  <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 text-muted-foreground">
+                    Street Address *
                   </label>
                   <input
                     type="text"
@@ -221,14 +273,14 @@ const Checkout = () => {
                     value={formData.address}
                     onChange={handleInputChange}
                     required
-                    className="w-full h-12 px-4 rounded-lg bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                    placeholder="123 Main Street"
+                    className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
+                    placeholder="123 Athlete Boulevard, Suite 4"
                   />
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium block mb-2">
-                      City
+                    <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 text-muted-foreground">
+                      City *
                     </label>
                     <input
                       type="text"
@@ -236,13 +288,13 @@ const Checkout = () => {
                       value={formData.city}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 px-4 rounded-lg bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                      className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
                       placeholder="New York"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium block mb-2">
-                      ZIP Code
+                    <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5 text-muted-foreground">
+                      ZIP / Postal Code *
                     </label>
                     <input
                       type="text"
@@ -250,10 +302,74 @@ const Checkout = () => {
                       value={formData.zipCode}
                       onChange={handleInputChange}
                       required
-                      className="w-full h-12 px-4 rounded-lg bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                      className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
                       placeholder="10001"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Payment Method Selection - Transparent & Honest */}
+              <div className="glass rounded-2xl p-6 space-y-4 border border-border/50">
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-bold">3</span>
+                  Payment Option
+                </h2>
+
+                <div className="space-y-3">
+                  {/* COD */}
+                  <label
+                    onClick={() => setPaymentMethod('cash_on_delivery')}
+                    className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                      paymentMethod === 'cash_on_delivery'
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border/60 hover:bg-muted/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'cash_on_delivery'}
+                      onChange={() => setPaymentMethod('cash_on_delivery')}
+                      className="mt-1"
+                    />
+                    <div>
+                      <div className="font-semibold text-foreground flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-primary" />
+                        Cash on Delivery (Pay on Arrival)
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pay cash or card directly to courier upon package inspection at your doorstep.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Sandbox Card */}
+                  <label
+                    onClick={() => setPaymentMethod('stripe_card_test')}
+                    className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                      paymentMethod === 'stripe_card_test'
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border/60 hover:bg-muted/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={paymentMethod === 'stripe_card_test'}
+                      onChange={() => setPaymentMethod('stripe_card_test')}
+                      className="mt-1"
+                    />
+                    <div>
+                      <div className="font-semibold text-foreground flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-primary" />
+                        Card Payment (Sandbox Simulation)
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Test flow simulation. Configure Stripe environment keys to activate live credit card processing.
+                      </p>
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -261,89 +377,95 @@ const Checkout = () => {
                 type="submit"
                 variant="gradient"
                 size="xl"
-                className="w-full gap-2"
+                className="w-full gap-2 shadow-lg"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
-                  'Processing...'
+                  'Verifying Order with Server...'
                 ) : (
                   <>
-                    <CreditCard className="w-5 h-5" />
-                    Place Order
+                    <CheckCircle className="w-5 h-5" />
+                    Place Order (${(total + (total >= 50 ? 0 : 4.99) + total * 0.08).toFixed(2)})
                   </>
                 )}
               </Button>
 
-              <p className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                <Lock className="w-4 h-4" />
-                Your payment information is secure
-              </p>
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground text-center">
+                <Info className="w-3.5 h-3.5" />
+                <span>Final price, tax, and stock verified securely by backend.</span>
+              </div>
             </form>
           </motion.div>
 
-          {/* Order Summary */}
+          {/* Order Summary with 3D Depth Card */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
+            className="lg:col-span-5 sticky top-24"
           >
-            <div className="glass rounded-2xl p-6 sticky top-24 space-y-6">
-              <h2 className="text-xl font-semibold">Order Summary</h2>
+            <ThreeDTilt depth="subtle">
+              <div className="glass rounded-3xl p-6 space-y-6 border border-border/60 shadow-xl">
+                <h2 className="text-xl font-display font-bold">Order Summary</h2>
 
-              {/* Items */}
-              <div className="space-y-4 max-h-[300px] overflow-y-auto">
-                {items.map((item) => (
-                  <div key={item.id} className="flex gap-4">
-                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm line-clamp-1">
-                        {item.name}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        Qty: {item.quantity}
+                {/* Items */}
+                <div className="space-y-4 max-h-[280px] overflow-y-auto pr-1">
+                  {items.map((item) => (
+                    <div key={item.id} className="flex gap-4 items-center">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/50">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm truncate text-foreground">
+                          {item.name}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Qty: {item.quantity} × ${item.price.toFixed(2)}
+                        </p>
+                      </div>
+                      <p className="font-bold text-sm text-foreground">
+                        ${(item.price * item.quantity).toFixed(2)}
                       </p>
                     </div>
-                    <p className="font-medium">
-                      ${(item.price * item.quantity).toFixed(2)}
-                    </p>
+                  ))}
+                </div>
+
+                <div className="h-px bg-border/60" />
+
+                {/* Calculation breakdown */}
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span className="font-medium text-foreground">${total.toFixed(2)}</span>
                   </div>
-                ))}
-              </div>
-
-              <div className="h-px bg-border" />
-
-              {/* Totals */}
-              <div className="space-y-3">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal</span>
-                  <span>${total.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Shipping</span>
-                  <span>{total >= 50 ? 'Free' : '$4.99'}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Tax</span>
-                  <span>${(total * 0.08).toFixed(2)}</span>
-                </div>
-                <div className="h-px bg-border" />
-                <div className="flex justify-between text-xl font-semibold">
-                  <span>Total</span>
-                  <span className="gradient-text">
-                    $
-                    {(total + (total >= 50 ? 0 : 4.99) + total * 0.08).toFixed(
-                      2
-                    )}
-                  </span>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Shipping</span>
+                    <span className="font-medium text-foreground">
+                      {total >= 50 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Free</span>
+                      ) : (
+                        '$4.99'
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Estimated Tax (8%)</span>
+                    <span className="font-medium text-foreground">${(total * 0.08).toFixed(2)}</span>
+                  </div>
+                  <div className="h-px bg-border/60" />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Estimated Total</span>
+                    <span className="gradient-text font-extrabold text-xl">
+                      ${(total + (total >= 50 ? 0 : 4.99) + total * 0.08).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </ThreeDTilt>
           </motion.div>
         </div>
       </div>

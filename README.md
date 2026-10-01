@@ -1,212 +1,248 @@
-# 🏃‍♂️ SportZone Store - Modern E-Commerce Platform
+# 🏃‍♂️ SportZone Store - Production-Ready Full-Stack Platform
 
-A sleek, modern, and high-performance e-commerce web application built for sports gear, apparel, and lifestyle products. Powered by **React 18**, **TypeScript**, **Vite**, **Tailwind CSS**, and **shadcn/ui**.
+A complete, production-ready e-commerce web platform for sports gear, performance footwear, and activewear. Built with **React 18**, **TypeScript**, **Vite**, **Tailwind CSS**, **shadcn/ui**, **Framer Motion**, and a dedicated **Express + TypeScript Backend Server**.
+
+Repository: [https://github.com/muzamilCodes/-SportZone-](https://github.com/muzamilCodes/-SportZone-)
 
 ---
 
 ## 📌 Table of Contents
 
-- [Overview](#overview)
+- [Architecture Overview](#architecture-overview)
 - [Key Features](#key-features)
 - [Tech Stack](#tech-stack)
 - [Folder Structure](#folder-structure)
-- [Application Pages & Routes](#application-pages--routes)
-- [Backend & API Integration](#backend--api-integration)
-- [Getting Started](#getting-started)
-- [Available Scripts](#available-scripts)
-- [Architecture & Design Decisions](#architecture--design-decisions)
+- [Prerequisites & Environment Variables](#prerequisites--environment-variables)
+- [How to Run (Separate Frontend & Backend)](#how-to-run-separate-frontend--backend)
+- [Database Setup & Seed Data](#database-setup--seed-data)
+- [Running Automated Tests](#running-automated-tests)
+- [Honest Checkout & Payment Integration](#honest-checkout--payment-integration)
+- [Performance & Accessibility (A11y)](#performance--accessibility-a11y)
+- [API Reference](#api-reference)
+- [Deployment Guidelines](#deployment-guidelines)
 
 ---
 
-## 🌟 Overview
+## 🏗️ Architecture Overview
 
-**SportZone Store** delivers a complete online shopping experience with seamless navigation, responsive UI, dynamic shopping cart management, authenticated user flow, and order tracking. It is built as a Single Page Application (SPA) leveraging React Router and client-side caching.
+The codebase is structured with clean separation of concerns:
+
+- **Frontend (Root)**: React 18 Single Page Application with client-side routing via React Router DOM, route-level code splitting (`React.lazy`), 3D depth tilt effects (`ThreeDTilt`), interactive 3D physics sports sphere, and Cart/Auth Contexts. Runs by default on `http://localhost:8080`.
+- **Backend (`/server`)**: Modular Express + TypeScript REST API featuring JWT authentication, Bcrypt password hashing, Zod schema validation, server-side price recalculation, stock tracking, and user-isolated order management. Runs by default on `http://localhost:4000`.
 
 ---
 
-## 🚀 Key Features
+## 🌟 Key Features
 
-### 🛍️ Storefront & Shopping
-- **Hero & Promotional Sections**: Engaging banners, value propositions (Free Shipping, Secure Payments, 24/7 Support), and category showcases.
-- **Product Catalog (`/products`)**: Browse items with real-time category filtering and live search capabilities.
-- **Product Details (`/product/:id`)**: Rich view with high-resolution imagery, pricing, descriptions, quantity selection, and instant Add to Cart.
-- **Interactive Shopping Cart (`/cart`)**: Real-time quantity adjustments, subtotal calculation, discount summaries, and direct checkout initiation.
-- **Checkout Flow (`/checkout`)**: Multi-step checkout with delivery address forms, order review, payment option selection, and toast notifications.
+### 1. 3D-Style Interactive Visual Experience
+- **Page-Specific 3D Depth**: Interactive mouse hover-tilt with CSS 3D perspective (`preserve-3d`, `rotateX`, `rotateY`) on Home hero, Product cards, Product details, Cart summary, Checkout summary, Login card, Dashboard profile, About values, and 404.
+- **Interactive 3D Sports Sphere**: Canvas-based 3D rotating geometry on the homepage with mouse drag interaction and physics damping.
+- **Lightweight Fallbacks**: Automatically disables heavy 3D calculations on touch/mobile devices and respects the user's `prefers-reduced-motion` accessibility preferences.
 
-### 👤 Authentication & Dashboard
-- **User Authentication (`/login`)**: Unified Login and Registration toggle with JWT token persistence in `localStorage`.
-- **User Dashboard (`/dashboard`)**: Displays user profile details and full order history with status badges (`pending`, `processing`, `shipped`, `delivered`).
-- **Protected State**: Axios interceptors automatically attach the `Authorization: Bearer <token>` header to secured API calls and handle 401 unauthenticated redirects.
+### 2. Fully Working Authentication & Verified Sessions
+- **Password Security**: Passwords hashed securely using `bcryptjs` (salt rounds: 10).
+- **Session Verification**: Frontend automatically validates stored JWT tokens against the server endpoint (`GET /auth/me`) on mount. If a token expires or is invalid, the user is safely logged out.
+- **Consistent Contract**: Full support and aliases for both `/user/login`, `/user/register` and `/api/auth/login`, `/api/auth/register`, eliminating endpoint mismatch.
 
-### ℹ️ Informational & Support Pages
-- **About Us (`/about`)**: Company story, mission, and brand philosophy.
-- **Contact Us (`/contact`)**: Interactive contact form and direct store contact details.
-- **FAQ (`/faq`)**: Expandable accordion questions covering ordering, payments, and delivery.
-- **Shipping & Returns (`/shipping`, `/returns`)**: Comprehensive shipping and return policy guidelines.
+### 3. Server-Recalculated E-Commerce & Stock Protection
+- **No Client Price Trust**: The backend ignores client-submitted prices and recalculates item subtotals, standard 8% tax, and shipping fees ($4.99 or Free on orders >= $50) directly from verified database records.
+- **Stock Validation**: Orders exceeding available inventory are strictly rejected with HTTP 400. Stock decrements atomically on order creation.
+- **User Order Isolation**: Each user can only view their own orders (`GET /order`). Cross-user order lookup returns HTTP 403 Forbidden.
 
-### 🎨 Visuals & UX
-- **Dark & Light Mode**: Built-in theme switcher using `next-themes` with automatic system theme detection.
-- **Micro-Animations**: Smooth page and component transitions powered by `framer-motion`.
-- **Accessible UI Primitives**: 40+ customized components from `shadcn/ui` based on Radix UI.
-- **Toast Notifications**: Feedback toasts via `sonner` and `shadcn` toast system.
+### 4. Honest & Transparent Checkout
+- Clear distinction between **Cash on Delivery (COD)** and **Card Payment (Sandbox Simulation)**.
+- No misleading "payment completed" claims without a live merchant transaction.
+- Standard environment variable placeholders provided for live Stripe integration (`VITE_STRIPE_PUBLISHABLE_KEY` and `STRIPE_SECRET_KEY`).
+
+### 5. Performance & Accessibility
+- **Route-Level Code Splitting**: All pages lazy-loaded via `React.lazy()` with custom loading fallback, reducing initial JavaScript chunk size.
+- **Sensible Caching**: React Query configured with 5-minute stale-time caching.
+- **Accessibility**: Full keyboard navigation, visible focus rings, ARIA roles, and high-contrast color tokens.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Category | Technologies |
+| Component | Technologies |
 |---|---|
-| **Core Framework** | [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/) |
-| **Bundler & Tooling** | [Vite 5](https://vitejs.dev/) |
-| **Styling** | [Tailwind CSS 3](https://tailwindcss.com/), `tailwindcss-animate`, `clsx`, `tailwind-merge` |
-| **UI Components** | [shadcn/ui](https://ui.shadcn.com/) (Radix UI primitives) |
-| **Icons** | [Lucide React](https://lucide.dev/) |
-| **Animations** | [Framer Motion](https://www.framer.com/motion/) |
-| **Routing** | [React Router DOM v6](https://reactrouter.com/) |
-| **State & Data Fetching** | React Context API, [TanStack React Query v5](https://tanstack.com/query/latest) |
-| **HTTP Client** | [Axios](https://axios-http.com/) |
-| **Forms & Validation** | [React Hook Form](https://react-hook-form.com/), [Zod](https://zod.dev/) |
-| **Charts & Carousel** | [Recharts](https://recharts.org/), [Embla Carousel](https://www.embla-carousel.com/) |
+| **Frontend Framework** | React 18, TypeScript 5, Vite 5 |
+| **Styling & Design System** | Tailwind CSS 3, `tailwindcss-animate`, shadcn/ui (Radix UI) |
+| **Animations & 3D** | Framer Motion, HTML5 3D Canvas Physics, CSS 3D Perspective |
+| **Routing & State** | React Router DOM v6, React Context, TanStack React Query v5 |
+| **Backend API** | Express 4, TypeScript 5, Node.js (via `tsx`) |
+| **Security & Auth** | JSON Web Tokens (`jsonwebtoken`), `bcryptjs`, `cors` |
+| **Validation** | Zod (strict backend schemas) |
+| **Testing** | Vitest, Supertest, React Testing Library, jsdom |
 
 ---
 
 ## 📁 Folder Structure
 
 ```text
-sportzone-package/
+SportZone-Store/
 ├── public/                 # Static assets & icons
-├── src/
-│   ├── api/
-│   │   └── axios.ts        # Configured Axios instance with request/response interceptors
+├── src/                    # Frontend application source
+│   ├── api/                # Configured Axios instance with interceptors
 │   ├── components/         # Reusable UI components
-│   │   ├── ui/             # shadcn/ui primitives (Button, Dialog, Card, Input, etc.)
-│   │   ├── Loader.tsx      # Spinners & skeleton loaders
-│   │   ├── NavLink.tsx     # Navigation link helper
-│   │   ├── ProductCard.tsx # Standardized product card
-│   │   ├── SearchBar.tsx   # Search input component
-│   │   └── ThemeToggle.tsx # Light/Dark mode toggle button
-│   ├── context/            # React Context state managers
-│   │   ├── AuthContext.tsx # User login, registration, and session state
-│   │   └── CartContext.tsx # Shopping cart items, counts, and pricing
-│   ├── hooks/              # Custom React hooks (toast, mobile detection, etc.)
-│   ├── layout/
-│   │   ├── MainLayout.tsx  # Global layout wrapping Navbar, Content, and Footer
-│   │   ├── Navbar.tsx      # Top navigation header with cart badge & mobile menu
-│   │   └── Footer.tsx      # Site-wide footer with quick links & newsletter
-│   ├── lib/                # Utilities (e.g., utils.ts for cn class merge)
-│   ├── pages/              # Application views / routes
-│   │   ├── Home.tsx
-│   │   ├── Products.tsx
-│   │   ├── ProductDetails.tsx
-│   │   ├── Cart.tsx
-│   │   ├── Checkout.tsx
-│   │   ├── Login.tsx
-│   │   ├── Dashboard.tsx
-│   │   ├── About.tsx
-│   │   ├── Contact.tsx
-│   │   ├── FAQ.tsx
-│   │   ├── Shipping.tsx
-│   │   └── NotFound.tsx
-│   ├── App.tsx             # Application router & providers wrapper
-│   ├── index.css           # Global Tailwind CSS and theme design tokens
-│   └── main.tsx            # React application entry point
-├── package.json            # Project dependencies and scripts
-├── tailwind.config.ts      # Tailwind design system configuration
-├── tsconfig.json           # TypeScript configuration
+│   │   ├── ThreeDTilt.tsx  # 3D perspective tilt component with motion fallback
+│   │   ├── ThreeDSportsBall.tsx # 3D interactive sports sphere
+│   │   ├── ProductCard.tsx # 3D interactive product card
+│   │   └── ui/             # shadcn/ui components (Radix primitives)
+│   ├── context/            # React Contexts (AuthContext, CartContext)
+│   ├── layout/             # MainLayout, Navbar, Footer
+│   ├── pages/              # Lazy-loaded route views (Home, Products, Details, Cart, etc.)
+│   ├── test/               # Frontend unit & characterization test suite
+│   ├── App.tsx             # Root router with Suspense & Context Providers
+│   └── index.css           # Global Tailwind CSS and design tokens
+├── server/                 # Dedicated backend REST API
+│   ├── src/
+│   │   ├── __tests__/      # Backend integration & security tests
+│   │   ├── middleware/     # JWT authentication & validation middleware
+│   │   ├── routes/         # Auth, Product, and Order routes
+│   │   ├── app.ts          # Express application setup & route aliases
+│   │   ├── db.ts           # Persistent database manager & atomic storage
+│   │   ├── index.ts        # Server entrypoint (Port 4000)
+│   │   ├── seed.ts         # Standalone database seed script
+│   │   └── seedData.ts     # Realistic sports products dataset
+│   ├── package.json        # Backend dependencies & test scripts
+│   ├── tsconfig.json       # Backend TypeScript configuration
+│   └── .env.example        # Backend environment variables template
+├── .env.example            # Frontend environment variables template
+├── package.json            # Root scripts for dev, build, lint, and test
+├── tailwind.config.ts      # Tailwind design configuration
 └── vite.config.ts          # Vite configuration
 ```
 
 ---
 
-## 🧭 Application Pages & Routes
-
-| Route | Page File | Description |
-|---|---|---|
-| `/` | `src/pages/Home.tsx` | Main landing page with hero banners, categories & featured items |
-| `/products` | `src/pages/Products.tsx` | Complete product catalog with search & filtering |
-| `/product/:id` | `src/pages/ProductDetails.tsx` | Detailed product showcase, specifications & add to cart |
-| `/cart` | `src/pages/Cart.tsx` | Shopping cart list, quantity controls & order summary |
-| `/checkout` | `src/pages/Checkout.tsx` | Checkout form with billing, shipping, and payment |
-| `/login` | `src/pages/Login.tsx` | User login and registration forms |
-| `/dashboard` | `src/pages/Dashboard.tsx` | User profile and real-time order history tracking |
-| `/about` | `src/pages/About.tsx` | Brand story and mission statement |
-| `/contact` | `src/pages/Contact.tsx` | Customer support contact form and details |
-| `/faq` | `src/pages/FAQ.tsx` | Frequently asked questions accordion |
-| `/shipping` | `src/pages/Shipping.tsx` | Shipping information and delivery estimates |
-| `/returns` | `src/pages/Shipping.tsx` | Return and refund policies |
-| `*` | `src/pages/NotFound.tsx` | 404 error page with quick return home button |
-
----
-
-## 🔌 Backend & API Integration
-
-The frontend connects to a REST API via `src/api/axios.ts` configured with a base URL of `http://localhost:4000`.
-
-### Expected API Endpoints:
-- **Authentication**:
-  - `POST /auth/login` - Authenticate user credentials and return JWT token
-  - `POST /auth/register` - Create a new user account
-  - `GET /auth/me` - Fetch logged-in user profile
-- **Products**:
-  - `GET /product` - Retrieve list of products
-  - `GET /product/:id` - Retrieve single product details
-- **Orders**:
-  - `GET /order` - Retrieve user's order history
-  - `POST /order` - Place a new customer order
-
-> [!NOTE]
-> To change the backend API URL, edit `baseURL` inside `src/api/axios.ts` or set up a `.env` environment variable (`VITE_API_URL`).
-
----
-
-## ⚡ Getting Started
+## ⚙️ Prerequisites & Environment Variables
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (version 18 or higher recommended)
-- `npm`, `yarn`, `pnpm`, or `bun`
+- **Node.js** >= 18.0.0
+- **npm** >= 9.0.0
 
-### Installation Steps
+### Frontend Environment (`.env`)
+Create a `.env` file in the root directory:
+```bash
+# Backend REST API URL
+VITE_API_URL=http://localhost:4000
 
-1. **Clone or navigate to the repository directory**:
-   ```bash
-   cd sportzone-package
-   ```
+# Optional Stripe Publishable Key
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_placeholder_key_here
+```
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start the local development server**:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:8080](http://localhost:8080) (or the port specified by Vite in your terminal) in your browser.
-
-4. **Build for production**:
-   ```bash
-   npm run build
-   ```
-
-5. **Preview production build locally**:
-   ```bash
-   npm run preview
-   ```
+### Backend Environment (`server/.env`)
+Create a `.env` file in the `server/` directory:
+```bash
+PORT=4000
+JWT_SECRET=sportzone_production_secret_key_2026
+CLIENT_ORIGIN=http://localhost:8080
+STRIPE_SECRET_KEY=sk_test_placeholder_key_here
+```
 
 ---
 
-## 📜 Available Scripts
+## 🚀 How to Run (Separate Frontend & Backend)
 
-- `npm run dev`: Starts Vite dev server with Hot Module Replacement (HMR).
-- `npm run build`: Compiles TypeScript and builds the production bundle into `/dist`.
-- `npm run build:dev`: Compiles development build mode.
-- `npm run lint`: Runs ESLint to check for code quality and syntax issues.
-- `npm run preview`: Locally serves the production build.
+You can run the backend and frontend in separate terminal windows:
+
+### Terminal 1: Run Backend Server
+```bash
+# Option A: From root directory
+npm run server:dev
+
+# Option B: From inside the server folder
+cd server
+npm install
+npm run dev
+```
+> The backend server will start at: **`http://localhost:4000`**  
+> Health check: `http://localhost:4000/api/health`
+
+### Terminal 2: Run Frontend Web App
+```bash
+# From root directory
+npm install
+npm run dev
+```
+> The frontend application will start at: **`http://localhost:8080`**
 
 ---
 
-## 💡 Architecture & Design Decisions
+## 🗄️ Database Setup & Seed Data
 
-- **Client-Side Routing**: Informational storefront pages (`/about`, `/contact`, `/faq`, `/shipping`) are registered directly in React Router, ensuring fast navigation without extra backend latency.
-- **Decoupled State**: Cart items are managed in `CartContext`, allowing instant updates across the Navbar badge, Cart view, and Product cards.
-- **Theme Resilience**: Dark/Light mode tokens are mapped via CSS variables in `src/index.css` for consistent contrast across components.
+The project includes an automatic JSON database with persistence in `server/data/db.json`. It auto-seeds on first run with 8 high-performance sports items (Nike Pegasus 40, Wilson Evolution Basketball, Garmin Forerunner 265, Babolat Pure Aero Racket, etc.).
+
+To re-seed the database manually at any time:
+```bash
+npm run seed
+# or: cd server && npm run seed
+```
+
+---
+
+## 🧪 Running Automated Tests
+
+A comprehensive suite of **20 automated characterization and security tests** is provided:
+
+### Run Both Test Suites
+```bash
+npm run test:all
+```
+
+### Run Frontend Tests (Vitest + React Testing Library)
+```bash
+npm test
+```
+- Tests CartContext addition, quantity increment, removal, subtotal calculation, and clear cart.
+
+### Run Backend Tests (Vitest + Supertest)
+```bash
+npm run test:server
+```
+- Tests password hashing with bcrypt
+- Duplicate email prevention (409)
+- Login validation & wrong password rejection (401)
+- Verified session retrieval via `/auth/me` with Bearer tokens
+- Products catalog & category filtering
+- Server-side price recalculation & anti-tamper price defense
+- Stock sufficiency enforcement (rejects orders over stock)
+- User order ownership & cross-user 403 authorization protection
+
+---
+
+## 💳 Honest Checkout & Payment Integration
+
+The checkout process operates transparently without misleading claims:
+
+1. **Cash on Delivery (COD)**: Fully functional out of the box. Records the order with `paymentMethod: cash_on_delivery` and `status: pending`.
+2. **Card Payment (Sandbox Simulation)**: Records the order in test mode with a clear notice indicating that live payment processing requires setting `VITE_STRIPE_PUBLISHABLE_KEY` and `STRIPE_SECRET_KEY`.
+
+---
+
+## 🌐 API Reference
+
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| `GET` | `/api/health` | Service health check | No |
+| `POST` | `/user/register` or `/auth/register` | Register new user account | No |
+| `POST` | `/user/login` or `/auth/login` | Login user and receive JWT token | No |
+| `GET` | `/auth/me` | Fetch verified profile of logged-in user | **Yes** (`Bearer <token>`) |
+| `GET` | `/product` | List all products with search & category filters | No |
+| `GET` | `/product/:id` | Fetch product details by ID | No |
+| `POST` | `/order` | Place order with server price & stock recalculation | Optional (associates if logged in) |
+| `GET` | `/order` | Retrieve user's order history | **Yes** (`Bearer <token>`) |
+| `GET` | `/order/:id` | Retrieve single order details (ownership protected) | **Yes** (`Bearer <token>`) |
+
+---
+
+## 🚢 Deployment Guidelines
+
+- **Frontend**: Deploy to Vercel, Netlify, or Cloudflare Pages. Set build command to `npm run build` and output directory to `dist`. Set environment variable `VITE_API_URL` to your production backend URL.
+- **Backend**: Deploy `server/` to Render, Railway, Fly.io, or Heroku. Set build command to `npm run build` and start command to `npm start`. Set environment variables `PORT`, `JWT_SECRET`, and `CLIENT_ORIGIN`.
+
+---
+
+## 📄 License & Attribution
+
+Developed for **SportZone Store**. All rights reserved.
