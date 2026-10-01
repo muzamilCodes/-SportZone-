@@ -1,20 +1,20 @@
 {
   "users": [
     {
-      "_id": "user-1790864070147-hy52x",
+      "_id": "user-1790865225228-h17f4",
       "name": "User A",
       "email": "usera@test.com",
-      "passwordHash": "$2a$10$lOJCXiaWXcv2j7nXK56DdupJLHhbeoYQ7yFuYm2EhBoS2UI3o6P1C",
+      "passwordHash": "$2a$10$J4Ef2vkur8tGQl18gSxbyudhvmvQGGlSnPwHususPV8JWsT9Dua2G",
       "role": "customer",
-      "createdAt": "2026-10-01T14:14:30.147Z"
+      "createdAt": "2026-10-01T14:33:45.228Z"
     },
     {
-      "_id": "user-1790864070213-duw4g",
+      "_id": "user-1790865225337-1hkd4",
       "name": "User B",
       "email": "userb@test.com",
-      "passwordHash": "$2a$10$rya5DMKUlMBTc/HbVWJice4JIh6sF5U.fY7FCkl59Mn1KrUlkzV/a",
+      "passwordHash": "$2a$10$dlc7Oqe/CDUaMvT7u2kBIOmbDGLsA0Uw0XSTHHPjPyjNVyvClvmMa",
       "role": "customer",
-      "createdAt": "2026-10-01T14:14:30.213Z"
+      "createdAt": "2026-10-01T14:33:45.337Z"
     }
   ],
   "products": [
@@ -109,8 +109,8 @@
   ],
   "orders": [
     {
-      "_id": "ord-1790864070220-wwnl",
-      "userId": "user-1790864070147-hy52x",
+      "_id": "ord-1790865225345-40gj",
+      "userId": "user-1790865225228-h17f4",
       "items": [
         {
           "productId": "prod-001",
@@ -135,7 +135,7 @@
         "city": "City A",
         "zipCode": "10001"
       },
-      "createdAt": "2026-10-01T14:14:30.220Z"
+      "createdAt": "2026-10-01T14:33:45.345Z"
     }
   ]
 }
