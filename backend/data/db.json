@@ -80,7 +80,7 @@
       "image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&h=600&fit=crop",
       "category": "Electronics",
       "description": "Deep muscle treatment simplified. QuietForce Technology delivers renowned Theragun power without disruptive noise for rapid athletic recovery.",
-      "stock": 20,
+      "stock": 18,
       "rating": 4.8,
       "featured": false
     },
@@ -108,6 +108,35 @@
     }
   ],
   "orders": [
+    {
+      "_id": "ord-1790868443999-tw7d",
+      "userId": "guest-1790868443996",
+      "items": [
+        {
+          "productId": "prod-006",
+          "name": "Theragun Prime Percussive Massage Gun",
+          "price": 299,
+          "quantity": 2,
+          "image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&h=600&fit=crop"
+        }
+      ],
+      "subtotal": 598,
+      "shippingFee": 0,
+      "tax": 47.84,
+      "total": 645.84,
+      "status": "pending",
+      "paymentMethod": "cash_on_delivery",
+      "paymentStatus": "pending",
+      "shipping": {
+        "name": "WAR MUZAMIL",
+        "email": "warmuzamil113@gmail.com",
+        "phone": "09682645127",
+        "address": "Qalamabad",
+        "city": "Qalamabad",
+        "zipCode": "193302"
+      },
+      "createdAt": "2026-10-01T15:27:24.000Z"
+    },
     {
       "_id": "ord-1790866915982-m4l6",
       "userId": "user-1790866915279-sgny7",
